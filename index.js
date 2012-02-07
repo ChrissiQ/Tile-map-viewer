@@ -7,12 +7,12 @@ var world = new function(){
 	this.land = new Array();
 	
 	this.createMap = function(){
-		this.maxX = 20;
-		this.maxY = 20;
+		this.maxX = 100;
+		this.maxY = 60;
 		
-		for ( i=0 ; i<this.maxX ; i++){
+		for ( i=0 ; i<this.maxY ; i++){
 			this.land[i] = [];
-			for ( j=0 ; j<this.maxY ; j++){
+			for ( j=0 ; j<this.maxX ; j++){
 				this.land[i][j] = 0;
 			}
 			
@@ -24,12 +24,12 @@ var world = new function(){
 			Math.floor( Math.random() * (this.maxX) ),
 			Math.floor( Math.random() * (this.maxY) )
 		);
-		this.land[randStart.x][randStart.y] = 1;
+		this.land[randStart.y][randStart.x] = 1;
 		
 		var current = new coord(randStart.x, randStart.y);
 			for ( i = 0 ; i < Math.floor((this.maxX * this.maxY)/2) ; i++ ){
 				
-			while (this.land[current.x][current.y] == 1) {
+			while (this.land[current.y][current.x] == 1) {
 				
 				// Add an integer between -1 and 1 to each coord.
 				current.x += Math.floor(Math.random() *3 -1);
@@ -40,24 +40,25 @@ var world = new function(){
 				if (current.x < 0) current.x = 0;
 				if (current.y < 0) current.y = 0;
 			}
-			this.land[current.x][current.y] = 1;
+			this.land[current.y][current.x] = 1;
 		}
 	}
 	
 	this.drawLand = function(){
 
 		this.worldtext = "";
-		for ( i=0 ; i<this.maxX ; i++ ){
+		for ( i=0 ; i<this.maxY ; i++ ){
 			
-			for ( j=0 ; j<this.maxY ; j++ ){
+			this.worldtext += "<div class='clear'>";
+			for ( j=0 ; j<this.maxX ; j++ ){
 				if (this.land[i][j] == 1){
-					this.worldtext += "<span class='water'>0</span>";
+					this.worldtext += "<span class='water'></span>";
 				} else {
-					this.worldtext += "<span class='land'>0</span>";
+					this.worldtext += "<span class='land'></span>";
 				}
 				//this.worldtext += "<span>" + this.land[i][j] + "</span>";
 			}
-			this.worldtext += "<br />";
+			this.worldtext += "</div>";
 			
 		}
 		$("#inner").html(this.worldtext);
@@ -76,7 +77,7 @@ $(document).keydown(function(event){
 
 
 
-		var divHeight = $("#inner").height();
+/*		var divHeight = $("#inner").height();
 		var divWidth = $("#inner").width();
 		
 		var windowHeight = $(window).height();
@@ -90,3 +91,4 @@ $(document).keydown(function(event){
 			$("#inner").height(windowHeight);
 			$("#inner").css("margin-top", "-" + Math.floor(windowHeight/2).toString() + "px");
 		}
+*/
