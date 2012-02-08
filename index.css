@@ -26,8 +26,8 @@ body{
 #inner span{
 	display: block;
 	float: left;
-	width: 1em;
-	height: 1em;
+	width: 5px;
+	height: 5px;
 	padding: 0;
 	margin: 0;
 }
