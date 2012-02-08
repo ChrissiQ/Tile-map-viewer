@@ -1,45 +1,6 @@
+#game{
+	border: 1px solid black;
+}
 body{
-	background-color: black;
-	color: white;
-	font-family: monospace;
-	margin: 0;
-	padding: 0;
-}
-
-#keyPressed{
-	top: 0;
-	left: 0;
-	background-color: black;
-	text-align: left;
-	position: absolute;
-}
-
-#outer{
-	width: 100%;
-	height: 100%;
-    position: absolute;
-    
-}
-#inner{
-}
-
-#inner span{
-	display: block;
-	float: left;
-	width: 5px;
-	height: 5px;
-	padding: 0;
-	margin: 0;
-}
-.clear{
-	clear: both;
-}
-span.land{
-	color: green;
-	background-color: green;
-}
-
-span.water{
-	color: blue;
-	background-color: blue;
+	background-color: cyan;
 }
