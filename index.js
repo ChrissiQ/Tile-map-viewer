@@ -5,19 +5,23 @@ function coord(x,y){
 }
 
 var world = new Array();
-var max = new coord(150,150);
+
+var scale = 5;
+var windowWidth = document.documentElement.clientWidth;
+var windowHeight = document.documentElement.clientHeight;
+var max = new coord(Math.floor(windowWidth/scale),Math.floor(windowHeight/scale));
 
 // Create flat blank world.
-(function flatWorld(){
+function flatWorld(){
 	for (i=0; i<max.x; i++){
 		world[i] = [];
 		for (j=0; j<max.y; j++){
 			world[i][j] = 0;
 		}
 	}
-}());
+};
 // Fill world with interesting stuff.
-(function fillWorld(){
+function fillWorld(){
 	var randStart = new coord(
 		Math.floor( Math.random() * (max.x) ),
 		Math.floor( Math.random() * (max.y) )
@@ -41,35 +45,37 @@ var max = new coord(150,150);
 		// Flip the switch to water on that pixel.
 		world[current.x][current.y] = 1;
 	}
-}());
-
-var scale = 4;
+};
 
 
 
-var canvas = document.getElementById('game');
-if (canvas.getContext){
+function drawCanvas(){
+	var canvas = document.getElementById('game');
+	if (canvas.getContext){
+		var ctx = canvas.getContext('2d');
+		canvas.width = max.x * scale;
+		canvas.height = max.y * scale;
 	
-	var ctx = canvas.getContext('2d');
-	canvas.width = max.x * scale;
-	canvas.height = max.y * scale;
-
-	for (j=0; j<max.y; j++){
-		for (i=0; i<max.x; i++){
-			if (world[i][j] == 0){
-				ctx.fillStyle = "blue";
-			} else {
-				ctx.fillStyle = "green";
+		for (j=0; j<max.y; j++){
+			for (i=0; i<max.x; i++){
+				if (world[i][j] == 0){
+					ctx.fillStyle = "blue";
+				} else {
+					ctx.fillStyle = "green";
+				}
+				ctx.fillRect(i*scale,j*scale,scale,scale);	
 			}
-			ctx.fillRect(i*scale,j*scale,scale,scale);	
 		}
+	} else {  
+	  // canvas-unsupported code here  
 	}
-} else {  
-  // canvas-unsupported code here  
-}
+};
+
+flatWorld();
+fillWorld();
+drawCanvas();
 
 
-
-$(document).keydown(function(event){
-	$("#keyPressed").text(event.keyCode)
-});
+//$(document).keydown(function(event){
+//	$("#keyPressed").text(event.keyCode)
+//});
