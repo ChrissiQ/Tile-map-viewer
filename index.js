@@ -3,6 +3,7 @@ function coord(x,y){
 	this.x = x ? x : 0;
 	this.y = y ? y : 0;
 }
+
 var world = new Array();
 
 var scale = 20;
@@ -85,7 +86,10 @@ function drawCanvas(){
 };
 
 function redraw(){
-	ctx.clearRect ( 0 , 0 , windowWidth , windowHeight );
+	(function clear(){
+		ctx.clearRect ( 0 , 0 , windowWidth , windowHeight );
+	}());
+	(function draw(){
 	for (j=min.y; j<max.y; j++){
 		for (i=min.x; i<max.x; i++){
 			if (world[i][j] == 1){
@@ -100,6 +104,7 @@ function redraw(){
 				scale);	
 		}
 	}
+	}())
 }
 
 function moveView(direction){
@@ -144,4 +149,32 @@ $(document).keydown(function(event){
 	}
 	redraw();
 	
+});
+
+$(document).bind('mousewheel', function(event, delta, deltaX, deltaY) {
+	if (delta > 0){
+		if (scale<100) scale++;
+	} else if (delta < 0){
+		if (scale>5) scale--;
+	}
+	
+	(function resize(){
+	windowWidth = document.documentElement.clientWidth;
+	windowHeight = document.documentElement.clientHeight;
+	min = new coord();
+	max = new coord(Math.floor(windowWidth/scale),Math.floor(windowHeight/scale));
+	canvas.width = max.x * scale;
+	canvas.height = max.y * scale;
+	
+	
+	for (i=min.x; i<max.x; i++){
+		if (!world[i]) world[i] = [];
+		for (j=min.y; j<max.y; j++){
+			if (!world[i][j]){
+				world[i][j] = 0;
+			}
+		}
+	}
+	}());
+	redraw();
 });
