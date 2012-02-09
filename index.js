@@ -4,177 +4,165 @@ function coord(x,y){
 	this.y = y ? y : 0;
 }
 
-var world = new Array();
 
-var scale = 20;
-var windowWidth = document.documentElement.clientWidth;
-var windowHeight = document.documentElement.clientHeight;
-var min = new coord();
-var max = new coord(Math.floor(windowWidth/scale),Math.floor(windowHeight/scale));
-
-
-var canvas = document.getElementById('game');
-var ctx;
-
-// Create flat blank world.
-function flatWorld(){
-	for (i=0; i<max.x; i++){
-		world[i] = [];
-		for (j=0; j<max.y; j++){
-			world[i][j] = 0;
-		}
-	}
-};
-
-function clearWorld(){
-	for (i=0; i<max.x; i++){
-		for (j=0; j<max.y; j++){
-			world[i][j] = 0;
-		}
-	}
-}
-// Fill world with interesting stuff.
-function fillWorld(){
-	var randStart = new coord(
-		Math.floor( Math.random() * (max.x) ),
-		Math.floor( Math.random() * (max.y) )
-	);
+var view = new function(){
+	this.scale = 10;
 	
-	var current = new coord(randStart.x, randStart.y);
-	for ( i = 1 ; i < Math.floor((max.x * max.y)/2) ; i++ ){		
-		while (world[current.x][current.y] == 1) {
-			
-			// Add an integer between -1 and 1 to each coord.
-			current.x += Math.floor(Math.random() *3 -1);
-			current.y += Math.floor(Math.random() *3 -1);
-			
-			// If the coord has left the map, bring it back on.
-			if (current.x >= max.x) current.x = max.x-1;
-			if (current.y >= max.y) current.y = max.y-1;
-			if (current.x < 0) current.x = 0;
-			if (current.y < 0) current.y = 0;
-		}
-		
-		// Flip the switch to water on that pixel.
-		world[current.x][current.y] = 1;
-	}
-};
-
-
-
-function drawCanvas(){
-	if (canvas.getContext){
-		ctx = canvas.getContext('2d');
-		canvas.width = max.x * scale;
-		canvas.height = max.y * scale;
+	this.width = document.documentElement.clientWidth;
+	this.height = document.documentElement.clientHeight;
 	
-		for (j=0; j<max.y; j++){
-			for (i=0; i<max.x; i++){
-				if (world[i][j] == 1){
-					ctx.fillStyle = "blue";
+	this.min = new coord();
+	this.max = new coord(
+		Math.floor((this.width-1)/this.scale),
+		Math.floor((this.height-1)/this.scale));
+	this.canvas = document.getElementById('game');	
+	this.canvas.width = this.max.x * this.scale;
+	this.canvas.height = this.max.y * this.scale;
+	this.ctx = this.canvas.getContext('2d');
+	
+	this.canvas.draw = function(){
+		for (j=view.min.y; j<view.max.y; j++){
+			for (i=view.min.x; i<view.max.x; i++){
+				if (world.map[i][j] == 1){
+					view.ctx.fillStyle = "blue";
 				} else {
-					ctx.fillStyle = "green";
+					view.ctx.fillStyle = "green";
 				}
-				ctx.fillRect(i*scale,j*scale,scale,scale);	
+				view.ctx.fillRect(
+					(i-view.min.x) * view.scale,
+					(j-view.min.y) * view.scale,
+					view.scale,
+					view.scale);
 			}
 		}
-	} else {
-		document.write("Your browser does not support the canvas element, ");
-		document.write("which is required to play this game.  Sorry!");
-		document.write("Please update your browser in order to play.");
 	}
-};
 
-function redraw(){
-	(function clear(){
-		ctx.clearRect ( 0 , 0 , windowWidth , windowHeight );
-	}());
-	(function draw(){
-	for (j=min.y; j<max.y; j++){
-		for (i=min.x; i<max.x; i++){
-			if (world[i][j] == 1){
-				ctx.fillStyle = "blue";
-			} else {
-				ctx.fillStyle = "green";
-			}
-			ctx.fillRect(
-				i*scale-min.x*scale,
-				j*scale-min.y*scale,
-				scale,
-				scale);	
-		}
+	this.canvas.clear = function(){
+		view.ctx.clearRect ( 0 , 0 , this.width , this.height );
 	}
-	}())
+	
+	this.resize = function(){		
+		this.width = document.documentElement.clientWidth;
+		this.height = document.documentElement.clientHeight;
+		this.min = new coord();
+		this.max = new coord(
+			Math.floor((this.width-1)/this.scale),
+			Math.floor((this.height-1)/this.scale));
+		this.canvas.width = this.max.x * this.scale;
+		this.canvas.height = this.max.y * this.scale;
+	}
 }
 
-function moveView(direction){
+var world = new function(){
+	this.map = new Array();
+	
+	// Creates an empty, flat world.
+	this.flatten = function(){
+		for (i=view.min.x; i<view.max.x; i++){
+			this.map[i] = [];
+			for (j=view.min.y; j<view.max.y; j++){
+				this.map[i][j] = 0;
+			}
+		}
+	}
+	
+	// Fills any gaps that might have come from resizing or moving.
+	this.fill = function(){
+		for (i=view.min.x; i<view.max.x; i++){
+			if (!this.map[i]) this.map[i] = [];
+			for (j=view.min.y; j<view.max.y; j++){
+				if (!this.map[i][j]){
+					this.map[i][j] = 0;
+				}
+			}
+		}
+	}
+	
+	// Generates terrain by selecting a random point, then moving randomly
+	// in a direction by one tile, and flipping that tile.
+	// Continues until half the tiles are filled.
+	// Obviously a very primitive generation tool, not a final product.
+	this.generate = function(){
+		
+		// Random starting point
+		var current = new coord(
+			Math.floor( Math.random() * view.max.x ),
+			Math.floor( Math.random() * view.max.y ));
+		
+		// Do the drunkard's walk.
+		for (i=1; i<Math.floor( (view.max.x * view.max.y) / 2 ); i++){
+			while (this.map[current.x][current.y] == 1) {
+				
+				// Add an integer between -1 and 1 to each coord.
+				current.x += Math.floor(Math.random() * 3 - 1);
+				current.y += Math.floor(Math.random() * 3 - 1);
+				
+				// If the coord has left the map, bring it back on.
+				if (current.x >= view.max.x) current.x = view.max.x - 1;
+				if (current.y >= view.max.y) current.y = view.max.y - 1;
+				if (current.x < view.min.x) current.x = view.min.x;
+				if (current.y < view.min.y) current.y = view.min.y;
+			}
+			
+			// Flip the switch to water on that pixel.
+			this.map[current.x][current.y] = 1;
+		}
+	}
+	
+	
 	
 }
 
-flatWorld();
-fillWorld();
-drawCanvas();
-/*setInterval( function(){
-		clearWorld();
-		fillWorld();
-		redraw();
-	}, 1000 );*/
+
+// Main line.
+world.flatten();
+world.generate();
+view.canvas.draw();
 
 
+// Bindings.
 $(document).keydown(function(event){
 	$("#keyPressed").text(event.keyCode)
 	//WASD
-	/*	*/ if (event.keyCode == 87){	// w
+	if (event.keyCode == 87){	// w
 		// up
-		min.y--;
-		max.y--;
+		view.min.y--;	view.max.y--;
+		
 	} else if (event.keyCode == 83){	// s
 		// down
-		min.y++;
-		max.y++;
+		view.min.y++;	view.max.y++;
+		
 	} else if (event.keyCode == 65){	// a
 		// left
-		min.x--;
-			if (!world[min.x]){
-				world[min.x] = 0;
+		view.min.x--;
+			if (!world.map[view.min.x]){
+				world.map[view.min.x] = 0;
 			}
-		max.x--;
+		view.max.x--;
+		
 	} else if (event.keyCode == 68){	// d
 		// right
-		min.x++;
-		max.x++;
-		if (!world[max.x-1]){
-			world[max.x-1] = [];
+		view.min.x++;
+		view.max.x++;
+		if (!world.map[view.max.x-1]){
+			world.map[view.max.x-1] = [];
 		}
 	}
-	redraw();
+	
+	view.canvas.clear();
+	view.canvas.draw();
 	
 });
 
 $(document).bind('mousewheel', function(event, delta, deltaX, deltaY) {
 	if (delta > 0){
-		if (scale<100) scale++;
+		if (view.scale<100) view.scale++;
 	} else if (delta < 0){
-		if (scale>5) scale--;
+		if (view.scale>5) view.scale--;
 	}
 	
-	(function resize(){
-	windowWidth = document.documentElement.clientWidth;
-	windowHeight = document.documentElement.clientHeight;
-	min = new coord();
-	max = new coord(Math.floor(windowWidth/scale),Math.floor(windowHeight/scale));
-	canvas.width = max.x * scale;
-	canvas.height = max.y * scale;
-	
-	
-	for (i=min.x; i<max.x; i++){
-		if (!world[i]) world[i] = [];
-		for (j=min.y; j<max.y; j++){
-			if (!world[i][j]){
-				world[i][j] = 0;
-			}
-		}
-	}
-	}());
-	redraw();
+	view.resize();
+	world.fill();
+	view.canvas.clear();
+	view.canvas.draw();
 });
