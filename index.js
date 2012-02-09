@@ -3,13 +3,17 @@ function coord(x,y){
 	this.x = x ? x : 0;
 	this.y = y ? y : 0;
 }
-
 var world = new Array();
 
-var scale = 10;
+var scale = 20;
 var windowWidth = document.documentElement.clientWidth;
 var windowHeight = document.documentElement.clientHeight;
+var min = new coord();
 var max = new coord(Math.floor(windowWidth/scale),Math.floor(windowHeight/scale));
+
+
+var canvas = document.getElementById('game');
+var ctx;
 
 // Create flat blank world.
 function flatWorld(){
@@ -20,6 +24,14 @@ function flatWorld(){
 		}
 	}
 };
+
+function clearWorld(){
+	for (i=0; i<max.x; i++){
+		for (j=0; j<max.y; j++){
+			world[i][j] = 0;
+		}
+	}
+}
 // Fill world with interesting stuff.
 function fillWorld(){
 	var randStart = new coord(
@@ -50,9 +62,8 @@ function fillWorld(){
 
 
 function drawCanvas(){
-	var canvas = document.getElementById('game');
 	if (canvas.getContext){
-		var ctx = canvas.getContext('2d');
+		ctx = canvas.getContext('2d');
 		canvas.width = max.x * scale;
 		canvas.height = max.y * scale;
 	
@@ -73,11 +84,64 @@ function drawCanvas(){
 	}
 };
 
+function redraw(){
+	ctx.clearRect ( 0 , 0 , windowWidth , windowHeight );
+	for (j=min.y; j<max.y; j++){
+		for (i=min.x; i<max.x; i++){
+			if (world[i][j] == 1){
+				ctx.fillStyle = "blue";
+			} else {
+				ctx.fillStyle = "green";
+			}
+			ctx.fillRect(
+				i*scale-min.x*scale,
+				j*scale-min.y*scale,
+				scale,
+				scale);	
+		}
+	}
+}
+
+function moveView(direction){
+	
+}
+
 flatWorld();
 fillWorld();
 drawCanvas();
+/*setInterval( function(){
+		clearWorld();
+		fillWorld();
+		redraw();
+	}, 1000 );*/
 
 
-//$(document).keydown(function(event){
-//	$("#keyPressed").text(event.keyCode)
-//});
+$(document).keydown(function(event){
+	$("#keyPressed").text(event.keyCode)
+	//WASD
+	/*	*/ if (event.keyCode == 87){	// w
+		// up
+		min.y--;
+		max.y--;
+	} else if (event.keyCode == 83){	// s
+		// down
+		min.y++;
+		max.y++;
+	} else if (event.keyCode == 65){	// a
+		// left
+		min.x--;
+			if (!world[min.x]){
+				world[min.x] = 0;
+			}
+		max.x--;
+	} else if (event.keyCode == 68){	// d
+		// right
+		min.x++;
+		max.x++;
+		if (!world[max.x-1]){
+			world[max.x-1] = [];
+		}
+	}
+	redraw();
+	
+});
