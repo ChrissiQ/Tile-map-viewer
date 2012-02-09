@@ -15,6 +15,11 @@ var view = new function(){
 	this.max = new coord(
 		Math.floor((this.width-1)/this.scale),
 		Math.floor((this.height-1)/this.scale));
+	
+	this.centre = new coord(
+		Math.round((this.width/2)/this.scale),
+		Math.round((this.height/2)/this.scale)
+	);
 	this.canvas = document.getElementById('game');	
 	this.canvas.width = this.max.x * this.scale;
 	this.canvas.height = this.max.y * this.scale;
@@ -50,17 +55,24 @@ var view = new function(){
 			Math.floor((this.height-1)/this.scale));
 		this.canvas.width = this.max.x * this.scale;
 		this.canvas.height = this.max.y * this.scale;
+		this.centre = new coord(
+			Math.round((this.width/2)/this.scale),
+			Math.round((this.height/2)/this.scale)
+		);
+		char1.loc = new coord(view.centre.x, view.centre.y);
 	}
 }
 
 var world = new function(){
 	this.map = new Array();
+	this.map.min = new coord();
+	this.map.max = new coord(view.max.x,view.max.y);
 	
 	// Creates an empty, flat world.
 	this.flatten = function(){
-		for (i=view.min.x; i<view.max.x; i++){
+		for (i=this.map.min.x; i<this.map.max.x; i++){
 			this.map[i] = [];
-			for (j=view.min.y; j<view.max.y; j++){
+			for (j=this.map.min.y; j<this.map.max.y; j++){
 				this.map[i][j] = 0;
 			}
 		}
@@ -108,16 +120,29 @@ var world = new function(){
 			this.map[current.x][current.y] = 1;
 		}
 	}
-	
-	
-	
 }
+
+function character(){
+	this.loc = new coord(view.centre.x, view.centre.y);
+	
+	this.draw = function(){
+		view.ctx.fillStyle = "red";
+		view.ctx.fillRect(
+			(this.loc.x) * view.scale,
+			(this.loc.y) * view.scale,
+			view.scale,
+			view.scale);
+	}
+}
+
+var char1 = new character();
 
 
 // Main line.
 world.flatten();
 world.generate();
 view.canvas.draw();
+char1.draw();
 
 
 // Bindings.
@@ -127,10 +152,12 @@ $(document).keydown(function(event){
 	if (event.keyCode == 87){	// w
 		// up
 		view.min.y--;	view.max.y--;
+		world.map.min.y--;
 		
 	} else if (event.keyCode == 83){	// s
 		// down
 		view.min.y++;	view.max.y++;
+		world.map.max.y++;
 		
 	} else if (event.keyCode == 65){	// a
 		// left
@@ -139,6 +166,7 @@ $(document).keydown(function(event){
 				world.map[view.min.x] = 0;
 			}
 		view.max.x--;
+		world.map.min.x--;
 		
 	} else if (event.keyCode == 68){	// d
 		// right
@@ -147,22 +175,49 @@ $(document).keydown(function(event){
 		if (!world.map[view.max.x-1]){
 			world.map[view.max.x-1] = [];
 		}
+		world.map.max.x++;
 	}
 	
 	view.canvas.clear();
 	view.canvas.draw();
+	char1.draw();
 	
 });
 
 $(document).bind('mousewheel', function(event, delta, deltaX, deltaY) {
+	// Element at mouse location before scale.
+	var prevScale = view.scale;
+	var element = new coord(
+		Math.round(event.pageX / view.scale),
+		Math.round(event.pageY / view.scale)
+	);
+
+	// Determine which way the mouse wheel spun, and scale the page.
 	if (delta > 0){
 		if (view.scale<100) view.scale++;
 	} else if (delta < 0){
 		if (view.scale>5) view.scale--;
 	}
 	
+	var offset = new coord(
+		event.pageX - (element.x * view.scale),
+		event.pageY - (element.y * view.scale)
+	);
+	/*
+	// Put ^ at mouse location again.
+	
+	element * view.scale + x == event.pageX
+	element * view.scale == event.pageX - x
+	element * view.scale - event.pageX == - x
+	x = event.pageX - (element * view.scale)
+	
+	X is offset. */
+	
+	
+	
 	view.resize();
 	world.fill();
 	view.canvas.clear();
 	view.canvas.draw();
+	char1.draw();
 });
