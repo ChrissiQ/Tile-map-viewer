@@ -6,7 +6,7 @@ function coord(x,y){
 
 var world = new Array();
 
-var scale = 5;
+var scale = 10;
 var windowWidth = document.documentElement.clientWidth;
 var windowHeight = document.documentElement.clientHeight;
 var max = new coord(Math.floor(windowWidth/scale),Math.floor(windowHeight/scale));
@@ -58,7 +58,7 @@ function drawCanvas(){
 	
 		for (j=0; j<max.y; j++){
 			for (i=0; i<max.x; i++){
-				if (world[i][j] == 0){
+				if (world[i][j] == 1){
 					ctx.fillStyle = "blue";
 				} else {
 					ctx.fillStyle = "green";
@@ -66,8 +66,10 @@ function drawCanvas(){
 				ctx.fillRect(i*scale,j*scale,scale,scale);	
 			}
 		}
-	} else {  
-	  // canvas-unsupported code here  
+	} else {
+		document.write("Your browser does not support the canvas element, ");
+		document.write("which is required to play this game.  Sorry!");
+		document.write("Please update your browser in order to play.");
 	}
 };
 
