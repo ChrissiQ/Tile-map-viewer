@@ -8,3 +8,10 @@ body{
 body{
 	background-color: cyan;
 }
+canvas{
+	display: block;
+}
+#keyPressed{
+	visibility: hidden;
+	height: 0;
+}

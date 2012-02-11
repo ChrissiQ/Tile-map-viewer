@@ -2,92 +2,117 @@ function coord(x,y){
 	// Coordinate object.  If given coords are blank, use default of 0,0.
 	this.x = x ? x : 0;
 	this.y = y ? y : 0;
-}
-
-
+	
+	// Translates world coordinates to screen coordinates.  Used for drawing.
+	this.toScreen = function(){
+		return new coord(
+			Math.floor((this.x - view.min.x)*view.scale + view.canvas.min.x),
+			Math.floor((this.y - view.min.y)*view.scale + view.canvas.min.y)
+		);
+	}
+	// Translates screen coordinates to point on the world.  Not used yet.
+	this.toWorld = function(){
+		return new coord(
+			Math.floor( (this.x / view.scale) + view.centre.x),
+			Math.floor( (this.y / view.scale) + view.centre.y)
+		);
+	}
+}	
 var view = new function(){
-	this.scale = 10;
-	
-	this.width = document.documentElement.clientWidth;
-	this.height = document.documentElement.clientHeight;
-	
-	this.min = new coord();
-	this.max = new coord(
-		Math.floor((this.width-1)/this.scale),
-		Math.floor((this.height-1)/this.scale));
-	
-	this.centre = new coord(
-		Math.round((this.width/2)/this.scale),
-		Math.round((this.height/2)/this.scale)
-	);
-	this.canvas = document.getElementById('game');	
-	this.canvas.width = this.max.x * this.scale;
-	this.canvas.height = this.max.y * this.scale;
+	this.scale = 19; // Size of tiles displayed on screen. If too small, performance suffers.
+	this.canvas = document.getElementById('game');		
 	this.ctx = this.canvas.getContext('2d');
 	
-	this.canvas.draw = function(){
-		for (j=view.min.y; j<view.max.y; j++){
-			for (i=view.min.x; i<view.max.x; i++){
-				if (world.map[i][j] == 1){
-					view.ctx.fillStyle = "blue";
-				} else {
-					view.ctx.fillStyle = "green";
-				}
-				view.ctx.fillRect(
-					(i-view.min.x) * view.scale,
-					(j-view.min.y) * view.scale,
-					view.scale,
-					view.scale);
-			}
-		}
+	this.centre = new coord();
+	// All size-based information determined by this function.
+	// Better than writing it out twice (once here, once when resizing screen).
+	this.size = function(){
+		//this.width = document.documentElement.clientWidth;
+		//this.height = document.documentElement.clientHeight;
+		this.width = $(window).width();
+		this.height = $(window).height();
+		
+		// Size the canvas to a multiple of tiles.
+		this.canvas.width = Math.floor(this.width/this.scale) * this.scale; 
+		this.canvas.height = Math.floor(this.height/this.scale) * this.scale;
+		// Make the canvas origin at the centre.
+		this.ctx.translate(Math.round(this.canvas.width / 2), Math.round(this.canvas.height / 2));
+		// View begins at centre of world.  View coords are measured in world tiles.
+		
+		// Find the corners of the canvas.
+		this.canvas.min = new coord(
+			- Math.round(this.canvas.width/2),
+			- Math.round(this.canvas.height/2)	
+		);
+		this.canvas.max = new coord(
+			Math.round(this.canvas.width/2),
+			Math.round(this.canvas.height/2)
+		);
+		// Find the corners of the view.
+		this.min = new coord(
+			//centre + # of tiles left & up
+			this.centre.x + Math.floor(this.canvas.min.x/this.scale),
+			this.centre.y + Math.floor(this.canvas.min.y/this.scale)
+		//	Math.floor(this.canvas.min.x / this.scale),
+		//	Math.floor(this.canvas.min.y / this.scale)
+		);
+		this.max = new coord(
+			this.centre.x + Math.round(this.canvas.max.x/this.scale),
+			this.centre.y + Math.round(this.canvas.max.y/this.scale)
+			//Math.ceil(this.canvas.max.x / this.scale),
+			//Math.ceil(this.canvas.max.y / this.scale)
+		);
 	}
-
-	this.canvas.clear = function(){
-		view.ctx.clearRect ( 0 , 0 , this.width , this.height );
+	this.size();
+	this.clear = function(){
+		view.ctx.clearRect(
+			this.canvas.min.x,
+			this.canvas.min.y,
+			this.canvas.width,
+			this.canvas.height
+		);
 	}
 	
-	this.resize = function(){		
-		this.width = document.documentElement.clientWidth;
-		this.height = document.documentElement.clientHeight;
-		this.min = new coord();
-		this.max = new coord(
-			Math.floor((this.width-1)/this.scale),
-			Math.floor((this.height-1)/this.scale));
-		this.canvas.width = this.max.x * this.scale;
-		this.canvas.height = this.max.y * this.scale;
-		this.centre = new coord(
-			Math.round((this.width/2)/this.scale),
-			Math.round((this.height/2)/this.scale)
-		);
-		char1.loc = new coord(view.centre.x, view.centre.y);
-	}
 }
 
 var world = new function(){
 	this.map = new Array();
-	this.map.min = new coord();
-	this.map.max = new coord(view.max.x,view.max.y);
-	
+
+	// Map size is somewhat arbitrary.
+	this.min = new coord(
+		- Math.floor(view.width / view.scale),
+		- Math.floor(view.height / view.scale)
+	);
+	this.max = new coord(
+		Math.ceil(view.width/view.scale),
+		Math.ceil(view.height/view.scale)
+	);
+	this.width = this.max.x - this.min.x;
+	this.height = this.max.y - this.min.y;
+	this.tiles = this.width * this.height;
+
 	// Creates an empty, flat world.
 	this.flatten = function(){
-		for (i=this.map.min.x; i<this.map.max.x; i++){
+		for (i=this.min.x; i<=this.max.x; i++){
 			this.map[i] = [];
-			for (j=this.map.min.y; j<this.map.max.y; j++){
+			for (j=this.min.y; j<=this.max.y; j++){
 				this.map[i][j] = 0;
-			}
-		}
+			}}
 	}
-	
 	// Fills any gaps that might have come from resizing or moving.
 	this.fill = function(){
-		for (i=view.min.x; i<view.max.x; i++){
+		
+		if (view.min.x <= world.min.x) world.min.x = view.min.x;
+		if (view.min.y <= world.min.y) world.min.y = view.min.y;
+		if (view.max.x >= world.max.x) world.max.x = view.max.x;
+		if (view.max.y >= world.max.y) world.max.y = view.max.y;
+		
+		for (i=this.min.x; i<=this.max.x; i++){
 			if (!this.map[i]) this.map[i] = [];
-			for (j=view.min.y; j<view.max.y; j++){
+			for (j=this.min.y; j<=this.max.y; j++){
 				if (!this.map[i][j]){
 					this.map[i][j] = 0;
-				}
-			}
-		}
+				}}}
 	}
 	
 	// Generates terrain by selecting a random point, then moving randomly
@@ -95,43 +120,65 @@ var world = new function(){
 	// Continues until half the tiles are filled.
 	// Obviously a very primitive generation tool, not a final product.
 	this.generate = function(){
-		
-		// Random starting point
 		var current = new coord(
-			Math.floor( Math.random() * view.max.x ),
-			Math.floor( Math.random() * view.max.y ));
-		
+			Math.floor((Math.random() * this.width)) + this.min.x,							
+			Math.floor((Math.random() * this.height)) + this.min.y
+		);
+		world.map[current.x][current.y] = 1;
 		// Do the drunkard's walk.
-		for (i=1; i<Math.floor( (view.max.x * view.max.y) / 2 ); i++){
-			while (this.map[current.x][current.y] == 1) {
-				
+		for (m=1; m<Math.floor(this.tiles/2); m++){	
+			while (world.map[current.x][current.y] == 1){
 				// Add an integer between -1 and 1 to each coord.
 				current.x += Math.floor(Math.random() * 3 - 1);
-				current.y += Math.floor(Math.random() * 3 - 1);
-				
+				current.y += Math.floor(Math.random() * 3 - 1);			
 				// If the coord has left the map, bring it back on.
-				if (current.x >= view.max.x) current.x = view.max.x - 1;
-				if (current.y >= view.max.y) current.y = view.max.y - 1;
-				if (current.x < view.min.x) current.x = view.min.x;
-				if (current.y < view.min.y) current.y = view.min.y;
+				if (current.x > this.max.x) current.x = this.max.x - 1;
+				if (current.y > this.max.y) current.y = this.max.y - 1;
+				if (current.x < this.min.x) current.x = this.min.x;
+				if (current.y < this.min.y) current.y = this.min.y;
 			}
-			
-			// Flip the switch to water on that pixel.
+			// Add water to the map @ current coord.
 			this.map[current.x][current.y] = 1;
 		}
 	}
 }
 
-function character(){
-	this.loc = new coord(view.centre.x, view.centre.y);
+view.canvas.draw = function(){
+	for (j=view.min.y; j<view.max.y; j++){
+		for (i=view.min.x; i<view.max.x; i++){
+			var current = new coord(i,j);
+			if (world.map[i][j] == 1){
+				view.ctx.fillStyle = "blue";
+			} else {
+				view.ctx.fillStyle = "green";
+			}
+			view.ctx.fillRect(
+				current.toScreen().x,
+				current.toScreen().y,
+				view.scale,
+				view.scale);
+		}
+	}
+	var center = new coord();
+	view.ctx.fillStyle = "black";
+	char1.draw();
+	view.ctx.strokeRect(
+		center.toWorld().toScreen().x - 0.5, center.toWorld().toScreen().y - 0.5,
+		view.scale+1, view.scale+1
+	);
+}
 	
+view.resize = function(){
+}
+
+function character(){
+	this.loc = new coord();	
 	this.draw = function(){
-		view.ctx.fillStyle = "red";
+		view.ctx.fillStyle = "white";
 		view.ctx.fillRect(
-			(this.loc.x) * view.scale,
-			(this.loc.y) * view.scale,
-			view.scale,
-			view.scale);
+			this.loc.toScreen().x,this.loc.toScreen().y,
+			view.scale,view.scale
+		);
 	}
 }
 
@@ -142,7 +189,6 @@ var char1 = new character();
 world.flatten();
 world.generate();
 view.canvas.draw();
-char1.draw();
 
 
 // Bindings.
@@ -151,36 +197,42 @@ $(document).keydown(function(event){
 	//WASD
 	if (event.keyCode == 87){	// w
 		// up
-		view.min.y--;	view.max.y--;
-		world.map.min.y--;
+		console.log("Up!", view.min.y);
+		view.centre.y--;
+		//view.min.y--;	view.max.y--;
+		if (view.min.y <= world.min.y) world.min.y--;
 		
 	} else if (event.keyCode == 83){	// s
 		// down
-		view.min.y++;	view.max.y++;
-		world.map.max.y++;
+		view.centre.y++;
+		//view.min.y++;	view.max.y++;
+		if (view.max.y >= world.max.y) world.max.y++;
 		
 	} else if (event.keyCode == 65){	// a
 		// left
-		view.min.x--;
-			if (!world.map[view.min.x]){
-				world.map[view.min.x] = 0;
-			}
-		view.max.x--;
-		world.map.min.x--;
+		//view.min.x--;
+		view.centre.x--;
+		if (view.min.x <= world.min.x) {
+			world.min.x--;
+			world.map[world.min.x] = [];
+		}
+		//view.max.x--;
 		
 	} else if (event.keyCode == 68){	// d
 		// right
-		view.min.x++;
-		view.max.x++;
-		if (!world.map[view.max.x-1]){
-			world.map[view.max.x-1] = [];
+		view.centre.x++;
+		//view.min.x++;
+		//view.max.x++;
+		if (view.max.x >= world.max.x){
+			world.max.x++;
+			world.map[world.max.x] = [];
 		}
-		world.map.max.x++;
 	}
 	
-	view.canvas.clear();
+	view.size();
+	world.fill();
+	view.clear();
 	view.canvas.draw();
-	char1.draw();
 	
 });
 
@@ -212,12 +264,18 @@ $(document).bind('mousewheel', function(event, delta, deltaX, deltaY) {
 	x = event.pageX - (element * view.scale)
 	
 	X is offset. */
-	
-	
-	
-	view.resize();
+	view.size();
 	world.fill();
-	view.canvas.clear();
+	view.clear();
+	view.canvas.draw();
+	char1.draw();
+});
+
+$(window).resize(function(){
+	view.size();
+	world.fill();
+	console.log(view.width,view.height);
+	view.clear();
 	view.canvas.draw();
 	char1.draw();
 });
