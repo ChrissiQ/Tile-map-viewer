@@ -4,17 +4,25 @@ function coord(x,y){
 	this.y = y ? y : 0;
 	
 	// Translates world coordinates to screen coordinates.  Used for drawing.
-	this.toScreen = function(){
+	
+	this.toScreen = function toScreen(){
 		return new coord(
-			Math.floor((this.x - view.min.x)*view.scale + view.canvas.min.x),
-			Math.floor((this.y - view.min.y)*view.scale + view.canvas.min.y)
+			(this.x - view.centre.x) * view.scale,
+			(this.y - view.centre.y) * view.scale
 		);
 	}
-	// Translates screen coordinates to point on the world.  Not used yet.
-	this.toWorld = function(){
+	// Translates screen coordinates to point on the world.
+	this.toWorld = function toWorld(){
 		return new coord(
 			Math.floor( (this.x / view.scale) + view.centre.x),
 			Math.floor( (this.y / view.scale) + view.centre.y)
+		);
+	}
+	
+	this.screenToScreen = function screenToScreen(){
+		return new coord(
+			Math.floor(this.x / view.scale) * view.scale,
+			Math.floor(this.y / view.scale) * view.scale
 		);
 	}
 }	
@@ -24,21 +32,16 @@ var view = new function(){
 	this.ctx = this.canvas.getContext('2d');
 	
 	this.centre = new coord();
+	this.focus = new coord();
 	// All size-based information determined by this function.
 	// Better than writing it out twice (once here, once when resizing screen).
-	this.size = function(){
-		//this.width = document.documentElement.clientWidth;
-		//this.height = document.documentElement.clientHeight;
+	this.size = function size(){
 		this.width = $(window).width();
 		this.height = $(window).height();
-		
-		// Size the canvas to a multiple of tiles.
-		this.canvas.width = Math.floor(this.width/this.scale) * this.scale; 
-		this.canvas.height = Math.floor(this.height/this.scale) * this.scale;
+		this.canvas.width = this.width; 
+		this.canvas.height = this.height;
 		// Make the canvas origin at the centre.
 		this.ctx.translate(Math.round(this.canvas.width / 2), Math.round(this.canvas.height / 2));
-		// View begins at centre of world.  View coords are measured in world tiles.
-		
 		// Find the corners of the canvas.
 		this.canvas.min = new coord(
 			- Math.round(this.canvas.width/2),
@@ -48,6 +51,8 @@ var view = new function(){
 			Math.round(this.canvas.width/2),
 			Math.round(this.canvas.height/2)
 		);
+	}; this.size();
+	this.reCentre = function reCentre(){
 		// Find the corners of the view.
 		this.min = new coord(
 			//centre + # of tiles left & up
@@ -62,9 +67,10 @@ var view = new function(){
 			//Math.ceil(this.canvas.max.x / this.scale),
 			//Math.ceil(this.canvas.max.y / this.scale)
 		);
-	}
-	this.size();
-	this.clear = function(){
+		this.focus.x = this.centre.x;
+		this.focus.y = this.centre.y;
+	}; this.reCentre();
+	this.clear = function clear(){
 		view.ctx.clearRect(
 			this.canvas.min.x,
 			this.canvas.min.y,
@@ -92,7 +98,7 @@ var world = new function(){
 	this.tiles = this.width * this.height;
 
 	// Creates an empty, flat world.
-	this.flatten = function(){
+	this.flatten = function flatten(){
 		for (i=this.min.x; i<=this.max.x; i++){
 			this.map[i] = [];
 			for (j=this.min.y; j<=this.max.y; j++){
@@ -100,7 +106,7 @@ var world = new function(){
 			}}
 	}
 	// Fills any gaps that might have come from resizing or moving.
-	this.fill = function(){
+	this.fill = function fill(){
 		
 		if (view.min.x <= world.min.x) world.min.x = view.min.x;
 		if (view.min.y <= world.min.y) world.min.y = view.min.y;
@@ -119,7 +125,7 @@ var world = new function(){
 	// in a direction by one tile, and flipping that tile.
 	// Continues until half the tiles are filled.
 	// Obviously a very primitive generation tool, not a final product.
-	this.generate = function(){
+	this.generate = function generate(){
 		var current = new coord(
 			Math.floor((Math.random() * this.width)) + this.min.x,							
 			Math.floor((Math.random() * this.height)) + this.min.y
@@ -143,7 +149,7 @@ var world = new function(){
 	}
 }
 
-view.canvas.draw = function(){
+view.canvas.draw = function canvDraw(){
 	for (j=view.min.y; j<view.max.y; j++){
 		for (i=view.min.x; i<view.max.x; i++){
 			var current = new coord(i,j);
@@ -159,21 +165,20 @@ view.canvas.draw = function(){
 				view.scale);
 		}
 	}
-	var center = new coord();
 	view.ctx.fillStyle = "black";
 	char1.draw();
 	view.ctx.strokeRect(
-		center.toWorld().toScreen().x - 0.5, center.toWorld().toScreen().y - 0.5,
+		view.focus.toScreen().x - 0.5, view.focus.toScreen().y - 0.5,
 		view.scale+1, view.scale+1
 	);
 }
 	
-view.resize = function(){
+view.resize = function resize(){
 }
 
 function character(){
 	this.loc = new coord();	
-	this.draw = function(){
+	this.draw = function chardraw(){
 		view.ctx.fillStyle = "white";
 		view.ctx.fillRect(
 			this.loc.toScreen().x,this.loc.toScreen().y,
@@ -197,7 +202,6 @@ $(document).keydown(function(event){
 	//WASD
 	if (event.keyCode == 87){	// w
 		// up
-		console.log("Up!", view.min.y);
 		view.centre.y--;
 		//view.min.y--;	view.max.y--;
 		if (view.min.y <= world.min.y) world.min.y--;
@@ -229,7 +233,7 @@ $(document).keydown(function(event){
 		}
 	}
 	
-	view.size();
+	view.reCentre();
 	world.fill();
 	view.clear();
 	view.canvas.draw();
@@ -264,18 +268,31 @@ $(document).bind('mousewheel', function(event, delta, deltaX, deltaY) {
 	x = event.pageX - (element * view.scale)
 	
 	X is offset. */
-	view.size();
+	view.reCentre();
 	world.fill();
 	view.clear();
 	view.canvas.draw();
-	char1.draw();
 });
 
 $(window).resize(function(){
 	view.size();
 	world.fill();
-	console.log(view.width,view.height);
 	view.clear();
 	view.canvas.draw();
-	char1.draw();
+});
+
+$('canvas#game').click(function(event){
+	console.log(event);
+	
+	var clickedPoint = new coord(
+		event.pageX + view.canvas.min.x,
+		event.pageY + view.canvas.min.y
+	);
+	view.centre.x = clickedPoint.toWorld().x;
+	view.centre.y = clickedPoint.toWorld().y;
+	
+	view.reCentre();
+	world.fill();
+	view.clear();
+	view.canvas.draw();
 });
